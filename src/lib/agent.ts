@@ -1,53 +1,164 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { CdpAgentkit } from "@coinbase/cdp-agentkit-core";
+import { CdpToolkit } from "@coinbase/cdp-langchain";
 import { HumanMessage } from "@langchain/core/messages";
+import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { ChatOpenAI } from "@langchain/openai";
 
-// Simulate CDP capabilities for the demo
-const simulateBlockchainAction = async (action: string, address: string) => {
-  // For demo purposes, return structured responses based on common blockchain actions
-  if (action.toLowerCase().includes('balance')) {
-    return `I can help you check the balance for ${address}. In a full implementation, I would use CDP's tools to fetch the actual balance.`;
+interface AgentConfig {
+  configurable: {
+    thread_id: string;
+  };
+}
+
+interface BlockchainAction {
+  action: string;
+  address: string;
+}
+
+async function initializeAgent() {
+  try {
+    const apiKey = import.meta.env.VITE_XAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('VITE_XAI_API_KEY environment variable is not set');
+    }
+
+    const llm = new ChatOpenAI({
+      model: "grok-beta",
+      apiKey,
+      configuration: {
+        baseURL: "https://api.x.ai/v1"
+      },       
+    });    
+
+    const config = {
+      cdpWalletData: import.meta.env.VITE_CDP_WALLET_DATA || undefined,
+      networkId: "base-sepolia",
+    };
+
+    const agentkit = await CdpAgentkit.configureWithWallet(config);
+    const cdpToolkit = new CdpToolkit(agentkit);
+    const tools = cdpToolkit.getTools();
+
+    const agentConfig: AgentConfig = { 
+      configurable: { 
+        thread_id: "CDP Agentkit Chatbot Example!" 
+      } 
+    };
+
+    const agent = createReactAgent({
+      llm,
+      tools,
+      stateModifier: `
+        You are a helpful agent that can interact onchain using the Coinbase Developer Platform Agentkit.
+        You are empowered to interact onchain using your tools.
+        If you need funds on base-sepolia, you can request them from the faucet.
+        Otherwise, provide wallet details and request funds from the user.
+        If a requested action isn't available with current tools, indicate this and direct users to docs.cdp.coinbase.com.
+        Be concise and helpful. Only explain tools when explicitly asked.
+      `,
+    });
+
+    return { agent, config: agentConfig };
+  } catch (error) {
+    console.error("Failed to initialize agent:", error instanceof Error ? error.message : error);
+    throw error;
   }
-  if (action.toLowerCase().includes('transaction') || action.toLowerCase().includes('transfer')) {
-    return `I can help you with transactions. With CDP integration, I would be able to help you send transactions from ${address}.`;
+}
+
+async function runAutonomousMode(
+  agent: ReturnType<typeof createReactAgent>, 
+  config: AgentConfig, 
+  interval = 10
+) {
+  console.log("Starting autonomous mode...");
+
+  while (true) {
+    try {
+      const thought = 
+        "Be creative and do something interesting on the blockchain. " +
+        "Choose an action or set of actions that highlights your abilities.";
+
+      const stream = await agent.stream(
+        { messages: [new HumanMessage(thought)] },
+        config
+      );
+
+      for await (const chunk of stream) {
+        if ("agent" in chunk) {
+          console.log("Agent:", chunk.agent.messages[0].content);
+        } else if ("tools" in chunk) {
+          console.log("Tools:", chunk.tools.messages[0].content);
+        }
+        console.log("-------------------");
+      }
+
+      await new Promise(resolve => setTimeout(resolve, interval * 1000));
+    } catch (error) {
+      console.error("Autonomous mode error:", error instanceof Error ? error.message : error);
+      break;
+    }
   }
-  return `I understand you want to ${action}. In the full version with CDP integration, I would be able to perform this action onchain.`;
+}
+
+export const tryAutonomous = async () => {
+  try {
+    const { agent, config } = await initializeAgent();
+    await runAutonomousMode(agent, config);
+  } catch (error) {
+    console.error("Failed to run autonomous mode:", error instanceof Error ? error.message : error);
+  }
+};
+
+const simulateBlockchainAction = async ({ action, address }: BlockchainAction): Promise<string> => {
+  const normalizedAction = action.toLowerCase();
+  
+  if (normalizedAction.includes('balance')) {
+    return `Simulated balance check for ${address}`;
+  }
+  if (normalizedAction.includes('transaction') || normalizedAction.includes('transfer')) {
+    return `Simulated transaction from ${address}`;
+  }
+  return `Simulated blockchain action: ${action} for ${address}`;
 };
 
 export async function getAgentResponse(message: string, address: string): Promise<string> {
   try {
+    const apiKey = import.meta.env.VITE_XAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('VITE_XAI_API_KEY environment variable is not set');
+    }
+
     const llm = new ChatOpenAI({
       model: "grok-beta",
-      apiKey: import.meta.env.VITE_XAI_API_KEY,
+      apiKey,
       configuration: {
         baseURL: "https://api.x.ai/v1"
       }
     });
 
-    // First, get AI's understanding of the request
     const response = await llm.invoke([
-      new HumanMessage(
-        `You are an AI assistant specializing in blockchain interactions. You have these capabilities:
-        1. Check wallet balances
-        2. Help with transactions
-        3. Provide blockchain information
-        4. Explain crypto concepts
-        
-        Format your response to clearly indicate any blockchain actions needed.
+      new HumanMessage(`
+        You are a blockchain interaction specialist with these capabilities:
+        - Check wallet balances
+        - Help with transactions
+        - Provide blockchain information
+        - Explain crypto concepts
         
         Connected wallet: ${address}
         User message: ${message}
         
-        Respond in a helpful and knowledgeable way, explaining what onchain actions you would take.`
-      )
+        Please provide a clear explanation of the required blockchain actions.
+      `)
     ]);
 
-    // Then simulate the blockchain action based on the AI's response
-    const aiResponse = response.content.toString();
-    const simulatedAction = await simulateBlockchainAction(message, address);
+    const simulatedAction = await simulateBlockchainAction({ 
+      action: message, 
+      address 
+    });
 
-    return `${aiResponse}\n\nDemonstration of onchain capability:\n${simulatedAction}`;
+    return `${response.content}\n\nSimulation Result:\n${simulatedAction}`;
   } catch (error) {
-    console.error('Agent response error:', error);
+    console.error('Agent response error:', error instanceof Error ? error.message : error);
     throw error;
   }
 }
