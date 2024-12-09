@@ -1,0 +1,48 @@
+{
+  "name": "cdp-agent-demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@coinbase/cdp-agentkit-core": "^0.0.6",
+    "@coinbase/cdp-langchain": "^0.0.7",
+    "@coinbase/wallet-sdk": "^4.2.4",
+    "@langchain/core": "^0.3.20",
+    "@langchain/langgraph": "^0.2.24",
+    "@langchain/openai": "^0.3.14",
+    "@rainbow-me/rainbowkit": "^2.2.1",
+    "@tanstack/react-query": "^5.62.2",
+    "@web3modal/ethereum": "^2.7.1",
+    "@web3modal/react": "^2.7.1",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.13.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1",
+    "viem": "^2.21.54",
+    "wagmi": "^2.13.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@tailwindcss/typography": "^0.5.15",
+    "@types/react": "^18.3.14",
+    "@types/react-dom": "^18.3.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "globals": "^15.12.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.15.0",
+    "vite": "^6.0.3"
+  }
+}
