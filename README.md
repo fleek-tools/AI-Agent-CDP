@@ -27,7 +27,7 @@ This repository demonstrates the usage of Coinbase Developer Platform (CDP) Agen
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/g4titanx/cdp-agent-demo.git
+git clone https://github.com/fleek-tools/ai-agent-cdp.git
 cd cdp-agent-demo
 ```
 
@@ -90,4 +90,4 @@ Contributions are welcome! Please follow these steps:
 Support
 For questions or issues, please create a GitHub issue.
 
-Happy Coding! 🚀
+#### Happy Coding! 🚀
